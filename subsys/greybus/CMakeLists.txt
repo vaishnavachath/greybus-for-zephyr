@@ -25,35 +25,36 @@ zephyr_library_sources(
 	qsort.c
 )
 
-if(${GREYBUS_TLS_BUILTIN})
+if(${CONFIG_GREYBUS_TLS_BUILTIN})
   set(gen_dir ${ZEPHYR_BINARY_DIR}/include/generated/)
 
   generate_inc_file_for_target(
     app
-    ${GREYBUS_TLS_BUILTIN_CA_CERT}
-    ${gen_dir}/greybus_builtin_ca_cert.inc
+    ${CONFIG_GREYBUS_TLS_BUILTIN_CA_CERT}
+    ${gen_dir}/greybus_tls_builtin_ca_cert.inc
   )
 
   generate_inc_file_for_target(
     app
-    ${GREYBUS_TLS_BUILTIN_SERVER_CERT}
-    ${gen_dir}/greybus_builtin_server_cert.inc
+    ${CONFIG_GREYBUS_TLS_BUILTIN_SERVER_CERT}
+    ${gen_dir}/greybus_tls_builtin_server_cert.inc
   )
 
   generate_inc_file_for_target(
     app
-    ${GREYBUS_TLS_BUILTIN_SERVER_PRIVKEY}
-    ${gen_dir}/greybus_builtin_server_privkey.inc
+    ${CONFIG_GREYBUS_TLS_BUILTIN_SERVER_PRIVKEY}
+    ${gen_dir}/greybus_tls_builtin_server_privkey.inc
   )
 
   # FIXME: this setup currently only enables 1 authorized public key 
   generate_inc_file_for_target(
     app
-    ${GREYBUS_TLS_BUILTIN_AUTHORIZED_KEYS}
-    ${gen_dir}/greybus_builtin_authorized_keys.inc
+    ${CONFIG_GREYBUS_TLS_BUILTIN_AUTHORIZED_KEYS}
+    ${gen_dir}/greybus_tls_builtin_authorized_keys.inc
   )
 endif()
 
+zephyr_library_sources_ifdef(CONFIG_GREYBUS_ENABLE_TLS     platform/certificate.c)
 zephyr_library_sources_ifdef(CONFIG_GREYBUS_XPORT_TCPIP    platform/transport-tcpip.c)
 zephyr_library_sources_ifdef(CONFIG_GREYBUS_XPORT_UART     platform/transport-uart.c)
 zephyr_library_sources_ifdef(CONFIG_GREYBUS_CONTROL        control-gpb.c)

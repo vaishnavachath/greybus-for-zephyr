@@ -14,6 +14,7 @@
 LOG_MODULE_REGISTER(greybus_service);
 
 #include "transport.h"
+#include "certificate.h"
 
 /* Currently only one greybus instance is supported */
 #define GREYBUS_BUS_NAME "GREYBUS_0"
@@ -44,6 +45,12 @@ int greybus_service_init(struct device *bus)
     unsigned int *cports = NULL;
 
     LOG_DBG("Greybus initializing..");
+
+    r = greybus_tls_init();
+    if (r < 0) {
+    	LOG_ERR("Failed to initialize TLS: %d", r);
+    	goto out;
+    }
 
 	r = gb_service_deferred_init();
 	if (r < 0) {
