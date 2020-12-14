@@ -39,6 +39,61 @@ endif # GREYBUS_XPORT_UART
 
 endchoice
 
+config GREYBUS_ENABLE_TLS
+	bool "Use TLS for Greybus"
+	depends on NET_SOCKETS_SOCKOPT_TLS
+	help
+	  This option enables Transport Layer Security for Greybus
+
+if GREYBUS_ENABLE_TLS
+choice
+	prompt "Which transport shall be used for Greybus?"
+	default GREYBUS_TLS_BUILTIN
+	
+config GREYBUS_TLS_BUILTIN
+	bool "Compile certificates into the application"
+	help
+	  This option compiles all certificates into the application
+	  by converting the specified files into C arrays.
+	  
+	  It should be noted that this is NOT SECURE.
+
+endchoice
+
+if GREYBUS_TLS_BUILTIN
+config GREYBUS_TLS_BUILTIN_CA_CERT
+	string "Path to the CA certificate"
+	default "${ZEPHYR_BASE}/samples/net/sockets/echo_server/src/ca.der"
+	help
+	  The path to the Certificate Signing-Authority certificate
+
+config GREYBUS_TLS_BUILTIN_SERVER_CERT
+	string "Path to the Greybus server certificate"
+	default "${ZEPHYR_BASE}/samples/net/sockets/echo_server/src/server.der"
+	help
+	  The path to the Greybus Server certificate (public key)
+
+config GREYBUS_TLS_BUILTIN_SERVER_PRIVKEY
+	string "Path to the Greybus server private key"
+	default "${ZEPHYR_BASE}/samples/net/sockets/echo_server/src/server_privkey.der"
+	help
+	  The path to the Greybus Server private key
+
+config GREYBUS_TLS_BUILTIN_AUTHORIZED_KEYS
+	string "Semicolon-separated paths of authorized public keys"
+	default "${ZEPHYR_BASE}/samples/net/sockets/echo_client/src/echo-apps-cert.der"
+	help
+	  Similar to the way that SSH parses ~/.ssh/authorized_keys,
+	  this is a semicolon-separated list of paths to public keys
+	  of clients that are authorized to connect to the Greybus
+	  Service.
+	  
+	  Any connections that are initiated for public keys
+	  that are not in this list will be terminated immediate
+	  following authentication failure.
+endif # GREYBUS_TLS_BUILTIN
+endif # GREYBUS_ENABLE_TLS
+
 config GREYBUS_AUDIO
 	bool "Greybus Audio"
 	default n
