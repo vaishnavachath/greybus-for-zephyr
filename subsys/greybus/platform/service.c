@@ -44,7 +44,7 @@ int greybus_service_init(struct device *bus)
 	size_t mnfb_size;
     unsigned int *cports = NULL;
 
-    LOG_DBG("Greybus initializing..");
+    LOG_INF("Initializing Greybus");
 
     r = greybus_tls_init();
     if (r < 0) {
