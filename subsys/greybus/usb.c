@@ -37,7 +37,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(greybus_usb, CONFIG_GREYBUS_LOG_LEVEL);
 
 static struct device *usbdev;

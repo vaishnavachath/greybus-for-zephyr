@@ -49,7 +49,7 @@
 
 #include <sys/byteorder.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(greybus_audio, CONFIG_GREYBUS_LOG_LEVEL);
 
 #include "audio-gb.h"

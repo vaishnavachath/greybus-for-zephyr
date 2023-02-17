@@ -38,7 +38,7 @@
 //#include <apps/greybus-utils/utils.h>
 #include <sys/byteorder.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(greybus_camera, CONFIG_GREYBUS_LOG_LEVEL);
 
 #include "camera-gb.h"
