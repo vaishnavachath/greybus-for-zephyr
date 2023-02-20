@@ -64,17 +64,6 @@ extern int usleep(useconds_t usec);
 #include <zephyr/posix/pthread.h>
 #include <zephyr/net/net_ip.h>
 
-unsigned int sleep(unsigned int seconds)
-{
-	k_sleep(K_MSEC(1000 * seconds));
-	return 0;
-}
-
-int usleep(useconds_t usec) {
-	k_usleep(usec);
-	return 0;
-}
-
 #endif
 
 #include <zephyr/logging/log.h>
