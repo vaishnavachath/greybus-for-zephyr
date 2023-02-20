@@ -193,6 +193,7 @@ config GREYBUS_CONTROL
 
 config GREYBUS_GPIO
 	bool "Greybus GPIO"
+	select GPIO_GET_DIRECTION
 	help
 	  Select this for Greybus GPIO support.
 
