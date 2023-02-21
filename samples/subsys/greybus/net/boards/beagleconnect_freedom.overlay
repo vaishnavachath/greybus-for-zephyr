@@ -14,14 +14,12 @@
 
 	greybus0: greybus0 {
 		compatible = "zephyr,greybus";
-		label = "GREYBUS_0";
 		greybus;
 	};
 
 	mikrobus0: mikrobus0 {
 		id = <0>;
 		compatible = "zephyr,greybus-mikrobusid";
-		label = "MIKROBUS_0";
 		cs-gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
 		rst-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
 	};
@@ -29,7 +27,6 @@
 	mikrobus1: mikrobus1 {
 		id = <1>;
 		compatible = "zephyr,greybus-mikrobusid";
-		label = "MIKROBUS_1";
 		cs-gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
 		rst-gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
 	};
@@ -40,14 +37,12 @@
 };
 
 &greybus0 {
-	label = "GREYBUS_0";
 	status = "okay";
 	/* defaults in effect, so this isn't necessary */
 	version-major = <GREYBUS_VERSION_MAJOR>;
 	version-minor = <GREYBUS_VERSION_MINOR>;
 
 	gbstring1: gbstring1 {
-		label = "GBSTRING_1";
 		status = "okay";
 		compatible = "zephyr,greybus-string";
 		/* NB: string id 0 is invalid */
@@ -56,7 +51,6 @@
 	};
 
 	gbstring2: gbstring2 {
-		label = "GBSTRING_2";
 		status = "okay";
 		compatible = "zephyr,greybus-string";
 		id = <2>;
@@ -64,7 +58,6 @@
 	};
 
 	gbstring3: gbstring3 {
-			label = "GBSTRING_3";
 			status = "okay";
 			compatible = "zephyr,greybus-string";
 			id = <3>;
@@ -72,7 +65,6 @@
 	};
 
 	gbstring4: gbstring4 {
-			label = "GBSTRING_4";
 			status = "okay";
 			compatible = "zephyr,greybus-string";
 			id = <4>;
@@ -80,7 +72,6 @@
 	};
 
 	gbinterface0 {
-		label = "GBINTERFACE_0";
 		status = "okay";
 		compatible = "zephyr,greybus-interface";
 		vendor-string-id = <&gbstring1>;
@@ -89,7 +80,6 @@
 	};
 
 	gbbundle0 {
-		label = "GBBUNDLE_0";
 		status = "okay";
 		compatible = "zephyr,greybus-bundle";
 		greybus-bundle;
@@ -102,7 +92,6 @@
 		bundle-class = <BUNDLE_CLASS_CONTROL>;
 
 		gbcontrol0 {
-			label = "GBCONTROL_0";
 			status = "okay";
 			compatible = "zephyr,greybus-control";
 			greybus-controller;
@@ -117,7 +106,6 @@
 	};
 
 	gbbundle1 {
-		label = "GBBUNDLE_1";
 		status = "okay";
 		compatible = "zephyr,greybus-bundle";
 		greybus-bundle;
@@ -125,7 +113,6 @@
 		bundle-class = <BUNDLE_CLASS_BRIDGED_PHY>;		
 				
 		gbgpio0 {
-			label = "GBGPIO_0";
 			status = "okay";
 			compatible = "zephyr,greybus-gpio-controller";
 			greybus-gpio-controller = <&gpio0>;
@@ -135,7 +122,6 @@
 		};
 
 		gbi2c0 {
-			label = "GBI2C_0";
 			status = "okay";
 			compatible = "zephyr,greybus-i2c-controller";
 			greybus-i2c-controller = <&i2c0>;
@@ -147,7 +133,6 @@
 	};
 
 	gbdevice0 {
-		label = "GBDEVICE_0";
 		status = "okay";
 		compatible = "zephyr,greybus-device";
 		id = <1>;
@@ -157,7 +142,6 @@
 	};
 
 	gbdevice1 {
-		label = "GBDEVICE_1";
 		status = "okay";
 		compatible = "zephyr,greybus-device";
 		id = <2>;
