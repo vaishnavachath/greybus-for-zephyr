@@ -327,6 +327,7 @@ static uint8_t gb_gpio_set_value(struct gb_operation *operation)
 
 static uint8_t gb_gpio_set_debounce(struct gb_operation *operation)
 {
+	int flags = 0;
 	const struct device *dev;
 	const struct gpio_driver_config *cfg;
 	struct gb_bundle *bundle = gb_operation_get_bundle(operation);
@@ -335,6 +336,9 @@ static uint8_t gb_gpio_set_debounce(struct gb_operation *operation)
 	struct gb_gpio_set_debounce_request *request =
 		gb_operation_get_request_payload(operation);
 
+#ifdef DT_HAS_TI_CC13XX_CC26XX_GPIO_ENABLED
+	flags = CC13XX_CC26XX_GPIO_DEBOUNCE;
+#endif
 	dev = bundle->dev[cport_idx];
 	if (dev == NULL) {
 		return GB_OP_INVALID;
@@ -352,7 +356,7 @@ static uint8_t gb_gpio_set_debounce(struct gb_operation *operation)
 		return GB_OP_INVALID;
 
 	if (sys_le16_to_cpu(request->usec) > 0) {
-		return gb_errno_to_op_result(gpio_pin_configure(dev, (gpio_pin_t)request->which, GPIO_INT_DEBOUNCE));
+		return gb_errno_to_op_result(gpio_pin_configure(dev, (gpio_pin_t)request->which, flags));
 	}
 
 	return GB_OP_SUCCESS;
