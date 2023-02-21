@@ -84,7 +84,7 @@ static uint8_t gb_gpio_line_count(struct gb_operation *operation)
 	if (!response)
 		return GB_OP_NO_MEMORY;
 
-	count = popcount(cfg->port_pin_mask);
+	count = POPCOUNT(cfg->port_pin_mask);
 	if (!count)
 		return GB_OP_UNKNOWN_ERROR;
 
@@ -116,7 +116,7 @@ static uint8_t gb_gpio_activate(struct gb_operation *operation)
 		return GB_OP_INVALID;
 	}
 
-	if (request->which >= popcount(cfg->port_pin_mask))
+	if (request->which >= POPCOUNT(cfg->port_pin_mask))
 		return GB_OP_INVALID;
 
 	/* No "activation" in Zephyr. Maybe power mgmt in the future */
@@ -147,7 +147,7 @@ static uint8_t gb_gpio_deactivate(struct gb_operation *operation)
 		return GB_OP_INVALID;
 	}
 
-	if (request->which >= popcount(cfg->port_pin_mask))
+	if (request->which >= POPCOUNT(cfg->port_pin_mask))
 		return GB_OP_INVALID;
 
 	/* No "deactivation" in Zephyr. Maybe power mgmt in the future */
@@ -179,7 +179,7 @@ static uint8_t gb_gpio_get_direction(struct gb_operation *operation)
 		return GB_OP_INVALID;
 	}
 
-	if (request->which >= popcount(cfg->port_pin_mask))
+	if (request->which >= POPCOUNT(cfg->port_pin_mask))
 		return GB_OP_INVALID;
 
 	response = gb_operation_alloc_response(operation, sizeof(*response));
@@ -215,7 +215,7 @@ static uint8_t gb_gpio_direction_in(struct gb_operation *operation)
 		return GB_OP_INVALID;
 	}
 
-	if (request->which >= popcount(cfg->port_pin_mask))
+	if (request->which >= POPCOUNT(cfg->port_pin_mask))
 		return GB_OP_INVALID;
 
 	return gb_errno_to_op_result(gpio_pin_configure(dev, (gpio_pin_t)request->which, GPIO_INPUT));
@@ -245,7 +245,7 @@ static uint8_t gb_gpio_direction_out(struct gb_operation *operation)
 		return GB_OP_INVALID;
 	}
 
-	if (request->which >= popcount(cfg->port_pin_mask))
+	if (request->which >= POPCOUNT(cfg->port_pin_mask))
 		return GB_OP_INVALID;
 
 	ret = gpio_pin_configure(dev, request->which, GPIO_OUTPUT);
@@ -285,7 +285,7 @@ static uint8_t gb_gpio_get_value(struct gb_operation *operation)
 		return GB_OP_INVALID;
 	}
 
-	if (request->which >= popcount(cfg->port_pin_mask))
+	if (request->which >= POPCOUNT(cfg->port_pin_mask))
 		return GB_OP_INVALID;
 
 	response = gb_operation_alloc_response(operation, sizeof(*response));
@@ -319,7 +319,7 @@ static uint8_t gb_gpio_set_value(struct gb_operation *operation)
 		return GB_OP_INVALID;
 	}
 
-	if (request->which >= popcount(cfg->port_pin_mask))
+	if (request->which >= POPCOUNT(cfg->port_pin_mask))
 		return GB_OP_INVALID;
 
 	return gb_errno_to_op_result(gpio_pin_set(dev, request->which, request->value));
@@ -352,7 +352,7 @@ static uint8_t gb_gpio_set_debounce(struct gb_operation *operation)
 		return GB_OP_INVALID;
 	}
 
-	if (request->which >= popcount(cfg->port_pin_mask))
+	if (request->which >= POPCOUNT(cfg->port_pin_mask))
 		return GB_OP_INVALID;
 
 	if (sys_le16_to_cpu(request->usec) > 0) {
@@ -385,7 +385,7 @@ static uint8_t gb_gpio_irq_mask(struct gb_operation *operation)
 		return GB_OP_INVALID;
 	}
 
-	if (request->which >= popcount(cfg->port_pin_mask))
+	if (request->which >= POPCOUNT(cfg->port_pin_mask))
 		return GB_OP_INVALID;
 
 	return gb_errno_to_op_result(gpio_pin_interrupt_configure(dev, request->which, GPIO_INT_DISABLE));
@@ -414,7 +414,7 @@ static uint8_t gb_gpio_irq_unmask(struct gb_operation *operation)
 		return GB_OP_INVALID;
 	}
 
-	if (request->which >= popcount(cfg->port_pin_mask))
+	if (request->which >= POPCOUNT(cfg->port_pin_mask))
 		return GB_OP_INVALID;
 
 	return gb_errno_to_op_result(gpio_pin_interrupt_configure(dev, request->which, GPIO_INT_ENABLE | GPIO_INT_EDGE_RISING));
@@ -475,7 +475,7 @@ static uint8_t gb_gpio_irq_type(struct gb_operation *operation)
 		return GB_OP_INVALID;
 	}
 
-	if (request->which >= popcount(cfg->port_pin_mask))
+	if (request->which >= POPCOUNT(cfg->port_pin_mask))
 		return GB_OP_INVALID;
 
 	switch(request->type) {
