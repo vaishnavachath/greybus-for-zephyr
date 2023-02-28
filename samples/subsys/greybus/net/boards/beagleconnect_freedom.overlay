@@ -163,7 +163,7 @@
 		id = <2>;
 		driver-string-id = <&gbstring4>;
 		protocol = <3>;
-		addr = <0x40>;
+		addr = <0x41>;
 	};
 	
 };
