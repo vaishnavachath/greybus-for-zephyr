@@ -124,7 +124,7 @@
 		gbi2c0 {
 			status = "okay";
 			compatible = "zephyr,greybus-i2c-controller";
-			greybus-i2c-controller = <&i2c0>;
+			greybus-i2c-controller = <&sens_i2c>;
 			/* I2C is CPort 2 in this case */
 			id = <2>;
 			cport-protocol = <CPORT_PROTOCOL_I2C>;
