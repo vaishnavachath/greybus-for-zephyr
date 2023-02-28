@@ -22,7 +22,7 @@ LOG_MODULE_REGISTER(greybus_service, CONFIG_GREYBUS_LOG_LEVEL);
 #include "certificate.h"
 
 /* Currently only one greybus instance is supported */
-#define GREYBUS_BUS_NAME "GREYBUS_0"
+#define GREYBUS_BUS_NAME "greybus0"
 
 static struct gb_transport_backend *xport;
 static size_t num_cports;

@@ -45,7 +45,7 @@ static int greybus_bundle_init(const struct device *dev) {
 				.id = DT_INST_PROP(_num, id),							\
 				.class_ = DT_INST_PROP(_num, bundle_class),				\
 				.bus_name = 											\
-					DT_LABEL(DT_PARENT(DT_DRV_INST(_num))),				\
+					DT_NODE_FULL_NAME(DT_PARENT(DT_DRV_INST(_num))),				\
         };                                                              \
                                                                         \
         DEVICE_DT_INST_DEFINE(_num,										\

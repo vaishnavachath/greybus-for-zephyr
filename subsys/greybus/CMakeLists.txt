@@ -29,7 +29,7 @@ zephyr_library_sources(
 if(CONFIG_GREYBUS_MANIFEST_BUILTIN)
 
   devicetree_unfixed_h_to_mnfs(
-	${PROJECT_BINARY_DIR}/include/generated/devicetree_unfixed.h
+	${PROJECT_BINARY_DIR}/include/generated/devicetree_generated.h
 	${PROJECT_BINARY_DIR}/include/generated/greybus.mnfs
     )
 

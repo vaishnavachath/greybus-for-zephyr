@@ -51,7 +51,7 @@ static int greybus_interface_init(const struct device *dev) {
 				DT_PROP(DT_PHANDLE(DT_DRV_INST(_num), 		\
 					product_string_id), id),				\
 			.bus_name = 									\
-				DT_LABEL(DT_PARENT(DT_DRV_INST(_num))),		\
+				DT_NODE_FULL_NAME(DT_PARENT(DT_DRV_INST(_num))),		\
         };													\
         													\
         DEVICE_DT_INST_DEFINE(_num, 						\

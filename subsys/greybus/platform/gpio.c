@@ -24,7 +24,7 @@ LOG_MODULE_REGISTER(greybus_platform_gpio_control, CONFIG_GREYBUS_LOG_LEVEL);
 struct greybus_gpio_control_config {
     const uint8_t id;
     const uint8_t bundle;
-    const char *const greybus_gpio_controller_name;
+    const struct device *greybus_gpio_controller;
     const char *const bus_name;
 };
 
@@ -93,13 +93,9 @@ static int greybus_gpio_control_init(const struct device *dev) {
     const struct device *bus;
     gpio_port_pins_t mask;
 
-    drv_data->greybus_gpio_controller =
-        device_get_binding(config->greybus_gpio_controller_name);
-    if (NULL == drv_data->greybus_gpio_controller) {
-		LOG_ERR("gpio control: failed to get binding for device '%s'",
-			config->greybus_gpio_controller_name);
+    drv_data->greybus_gpio_controller = config->greybus_gpio_controller;
+    if (NULL == drv_data->greybus_gpio_controller)
 		return -ENODEV;
-    }
 
     mask = ((struct gpio_driver_config *)drv_data->greybus_gpio_controller
     			->config)->port_pin_mask;
@@ -142,11 +138,11 @@ static int greybus_gpio_control_init(const struct device *dev) {
 			greybus_gpio_control_config_##_num = {								\
                 .id = (uint8_t)DT_INST_PROP(_num, id), 							\
                 .bundle = (uint8_t)DT_PROP(DT_PARENT(DT_DRV_INST(_num)), id), 	\
-				.greybus_gpio_controller_name = 								\
-                    DT_LABEL(DT_PHANDLE(DT_DRV_INST(_num), 						\
+				.greybus_gpio_controller = 								\
+                    DEVICE_DT_GET(DT_PHANDLE(DT_DRV_INST(_num), 						\
                     		greybus_gpio_controller)), 							\
 				.bus_name = 													\
-					DT_LABEL(DT_PARENT(DT_PARENT(DT_DRV_INST(_num)))),			\
+					DT_NODE_FULL_NAME(DT_PARENT(DT_PARENT(DT_DRV_INST(_num)))),			\
         };																		\
         																		\
         static struct greybus_gpio_control_data									\

@@ -44,8 +44,8 @@ unsigned char *greybus_manifest_click_fragment_clickid[2];
 
 struct mikrobusid_config {
 	unsigned int id;
-	const char *cs_gpio_name;
-	const char *rst_gpio_name;
+	const struct device *cs_gpio;
+	const struct device *rst_gpio;
     gpio_pin_t cs_pin;
 	gpio_pin_t rst_pin;
 	gpio_dt_flags_t cs_flags;
@@ -126,7 +126,7 @@ static int mikrobusid_init(const struct device *dev) {
 	unsigned int manifest_size = 0;
 	uint8_t mikrobus_manifest_start_addr_byte[MIKROBUS_ID_USER_EEPROM_SIZE];
 
-	context->cs_gpio = device_get_binding(config->cs_gpio_name);
+	context->cs_gpio = config->cs_gpio;
 	if (!context->cs_gpio) {
 		LOG_ERR("failed to get CS GPIO device");
 		return -EINVAL;
@@ -139,7 +139,7 @@ static int mikrobusid_init(const struct device *dev) {
 		return err;
 	}
 	
-	context->rst_gpio = device_get_binding(config->rst_gpio_name);
+	context->rst_gpio = config->rst_gpio;
 	if (!context->rst_gpio) {
 		LOG_ERR("failed to get RST GPIO device");
 		return -EINVAL;
@@ -230,8 +230,8 @@ static struct mikrobusid_context mikrobusid_dev_data_##_num;		\
         static const struct mikrobusid_config 						\
 			mikrobusid_config_##_num = {      						\
 					.id  	= DT_INST_PROP(_num, id),		\
-					.cs_gpio_name	= DT_INST_GPIO_LABEL(_num, cs_gpios),	\
-					.rst_gpio_name	= DT_INST_GPIO_LABEL(_num, rst_gpios),	\
+					.cs_gpio	= DEVICE_DT_GET(DT_GPIO_CTLR(DT_DRV_INST(_num), cs_gpios)),     \
+					.rst_gpio	= DEVICE_DT_GET(DT_GPIO_CTLR(DT_DRV_INST(_num), rst_gpios)),	\
 					.cs_pin		= DT_INST_GPIO_PIN(_num, cs_gpios),	\
 					.rst_pin	= DT_INST_GPIO_PIN(_num, rst_gpios),	\
 					.cs_flags	= DT_INST_GPIO_FLAGS(_num, cs_gpios),	\
