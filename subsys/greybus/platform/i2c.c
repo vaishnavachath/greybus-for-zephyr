@@ -4,18 +4,18 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <drivers/i2c.h>
+#include <zephyr/drivers/i2c.h>
 #include <dt-bindings/greybus/greybus.h>
 #include <greybus/greybus.h>
 #include <greybus/platform.h>
 #include <stdint.h>
-#include <sys/byteorder.h>
-#include <zephyr.h>
+#include <zephyr/sys/byteorder.h>
+#include <zephyr/kernel.h>
 
 #define DT_DRV_COMPAT zephyr_greybus_i2c_controller
-#include <device.h>
+#include <zephyr/device.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(greybus_platform_i2c_control, CONFIG_GREYBUS_LOG_LEVEL);
 
 #include "../i2c-gb.h"
@@ -24,7 +24,7 @@ LOG_MODULE_REGISTER(greybus_platform_i2c_control, CONFIG_GREYBUS_LOG_LEVEL);
 struct greybus_i2c_control_config {
     const uint8_t id;
     const uint8_t bundle;
-    const char *const greybus_i2c_controller_name;
+    const struct device *greybus_i2c_controller;
     const char *const bus_name;
 };
 
@@ -41,13 +41,9 @@ static int greybus_i2c_control_init(const struct device *dev) {
     int r;
     const struct device *bus;
 
-    drv_data->greybus_i2c_controller =
-        device_get_binding(config->greybus_i2c_controller_name);
-    if (NULL == drv_data->greybus_i2c_controller) {
-		LOG_ERR("i2c control: failed to get binding for device '%s'",
-			config->greybus_i2c_controller_name);
-		return -ENODEV;
-    }
+    drv_data->greybus_i2c_controller = config->greybus_i2c_controller;
+    if (NULL == drv_data->greybus_i2c_controller)
+    	return -ENODEV;
 
     bus = device_get_binding(config->bus_name);
     if (NULL == bus) {
@@ -79,11 +75,10 @@ static int greybus_i2c_control_init(const struct device *dev) {
 			greybus_i2c_control_config_##_num = {								\
                 .id = (uint8_t)DT_INST_PROP(_num, id), \
                 .bundle = (uint8_t)DT_PROP(DT_PARENT(DT_DRV_INST(_num)), id), \
-				.greybus_i2c_controller_name = 								\
-                    DT_LABEL(DT_PHANDLE(DT_DRV_INST(_num), 						\
-                    		greybus_i2c_controller)), 							\
+				.greybus_i2c_controller = 								\
+                    DEVICE_DT_GET(DT_PHANDLE(DT_DRV_INST(_num),greybus_i2c_controller)), 							\
 				.bus_name = 									\
-					DT_LABEL(DT_PARENT(DT_PARENT(DT_DRV_INST(_num)))),		\
+					DT_NODE_FULL_NAME(DT_PARENT(DT_PARENT(DT_DRV_INST(_num)))),		\
         };																		\
         																		\
         static struct greybus_i2c_control_data									\

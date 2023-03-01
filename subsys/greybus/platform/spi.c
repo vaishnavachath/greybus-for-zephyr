@@ -4,18 +4,18 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <drivers/spi.h>
+#include <zephyr/drivers/spi.h>
 #include <dt-bindings/greybus/greybus.h>
 #include <greybus/greybus.h>
 #include <greybus/platform.h>
 #include <stdint.h>
-#include <sys/byteorder.h>
-#include <zephyr.h>
+#include <zephyr/sys/byteorder.h>
+#include <zephyr/kernel.h>
 
 #define DT_DRV_COMPAT zephyr_greybus_spi_controller
-#include <device.h>
+#include <zephyr/device.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(greybus_platform_spi_control, CONFIG_GREYBUS_LOG_LEVEL);
 
 #include "../spi-gb.h"
@@ -108,7 +108,7 @@ unlock:
 struct greybus_spi_control_config {
     const uint8_t id;
     const uint8_t bundle;
-    const char *const greybus_spi_controller_name;
+    const struct device *greybus_spi_controller;
     const char *const bus_name;
 
     const struct gb_spi_master_config_response ctrl_rsp;
@@ -132,13 +132,9 @@ static int greybus_spi_control_init(const struct device *dev) {
     int r;
     const struct device *bus;
 
-    drv_data->greybus_spi_controller =
-        device_get_binding(config->greybus_spi_controller_name);
-    if (NULL == drv_data->greybus_spi_controller) {
-		LOG_ERR("spi control: failed to get binding for device '%s'",
-			config->greybus_spi_controller_name);
+    drv_data->greybus_spi_controller = config->greybus_spi_controller;
+    if (NULL == drv_data->greybus_spi_controller)
 		return -ENODEV;
-    }
 
     r = gb_add_spipair(drv_data->greybus_spi_controller, dev);
     __ASSERT(r == 0, "failed to add spi mapping: %p <-> %p",
@@ -219,21 +215,12 @@ static int gb_plat_api_get_cs_control(const struct device *dev, uint8_t chip_sel
 		return -EINVAL;
 	}
 
-	/*
-	 * Slightly dirty hack.
-	 * Not currently possible in Zephyr to have a const struct device * be
-	 * compile-time const. Instead we use the gpio_dev field to hold
-	 * a pointer to the DT_LABEL of the gpio_dev, and get an actual
-	 * const struct device * at runtime */
-	const char *dev_name = (const char *)config->cs_control[chip_select].gpio_dev;
-	const struct device *const gpio_dev = device_get_binding(dev_name);
-	if (gpio_dev == NULL) {
-		LOG_ERR("failed to look up cs %u GPIO device for '%s'", chip_select, dev_name);
+	if (config->cs_control[chip_select].gpio.port == NULL) {
+		LOG_ERR("failed to look up cs %u GPIO device", chip_select);
 		return -ENODEV;
 	}
 
 	memcpy(ctrl, &config->cs_control[chip_select], sizeof(*ctrl));
-	ctrl->gpio_dev = gpio_dev;
 
 	return 0;
 }
@@ -309,8 +296,8 @@ static const struct gb_platform_spi_api gb_platform_spi_api = {
 			greybus_spi_control_config_##_num = {								\
                 .id = (uint8_t)DT_INST_PROP(_num, id), \
                 .bundle = (uint8_t)DT_PROP(DT_PARENT(DT_DRV_INST(_num)), id), \
-				.greybus_spi_controller_name = 								\
-                    DT_LABEL(DT_PHANDLE(DT_DRV_INST(_num), 						\
+				.greybus_spi_controller = 								\
+                    DEVICE_DT_GET(DT_PHANDLE(DT_DRV_INST(_num), 						\
                     		greybus_spi_controller)), 							\
 				.bus_name = 									\
 					DT_LABEL(DT_PARENT(DT_PARENT(DT_DRV_INST(_num)))),		\

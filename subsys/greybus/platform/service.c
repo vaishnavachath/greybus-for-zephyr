@@ -4,17 +4,17 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <device.h>
-#include <init.h>
+#include <zephyr/device.h>
+#include <zephyr/init.h>
 #include <greybus/greybus.h>
 #include <greybus/platform.h>
 #include <greybus-utils/manifest.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(greybus_service, CONFIG_GREYBUS_LOG_LEVEL);
 
 #include "transport.h"
@@ -22,7 +22,7 @@ LOG_MODULE_REGISTER(greybus_service, CONFIG_GREYBUS_LOG_LEVEL);
 #include "certificate.h"
 
 /* Currently only one greybus instance is supported */
-#define GREYBUS_BUS_NAME "GREYBUS_0"
+#define GREYBUS_BUS_NAME "greybus0"
 
 static struct gb_transport_backend *xport;
 static size_t num_cports;

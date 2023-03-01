@@ -5,13 +5,13 @@
  */
 
 #include <stdint.h>
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 
 #define DT_DRV_COMPAT zephyr_greybus_bundle
-#include <device.h>
-#include <devicetree.h>
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(greybus_platform_bundle, CONFIG_GREYBUS_LOG_LEVEL);
 
 struct greybus_bundle_config {
@@ -45,7 +45,7 @@ static int greybus_bundle_init(const struct device *dev) {
 				.id = DT_INST_PROP(_num, id),							\
 				.class_ = DT_INST_PROP(_num, bundle_class),				\
 				.bus_name = 											\
-					DT_LABEL(DT_PARENT(DT_DRV_INST(_num))),				\
+					DT_NODE_FULL_NAME(DT_PARENT(DT_DRV_INST(_num))),				\
         };                                                              \
                                                                         \
         DEVICE_DT_INST_DEFINE(_num,										\
