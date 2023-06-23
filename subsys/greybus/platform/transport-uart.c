@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <zephyr/sys/byteorder.h>
-#include <sys/ring_buffer.h>
+#include <zephyr/sys/ring_buffer.h>
 #include <zephyr/kernel.h>
 
 #include "transport.h"
@@ -43,6 +43,9 @@ static void uart_work_fn(struct k_work *work)
 	size_t msg_size;
 	size_t payload_size;
 	size_t expected_size;
+	uint8_t byte;
+    uint8_t ovflw;
+	size_t count;
 	unsigned int cport = -1;
 	int r;
 
@@ -57,7 +60,6 @@ static void uart_work_fn(struct k_work *work)
 	len = ring_buf_get(&uart_rb, data, expected_size);
 	msg = (struct gb_operation_hdr *)data;
 	msg_size = sys_le16_to_cpu(msg->size);
-
 	if (msg_size < sizeof(struct gb_operation_hdr)) {
 		LOG_ERR("invalid message size %u", (unsigned)msg_size);
 		free(data);
@@ -74,7 +76,23 @@ static void uart_work_fn(struct k_work *work)
 	len = UART_RB_SIZE - ring_buf_space_get(&uart_rb);
 	while(len < payload_size){
 		len = UART_RB_SIZE - ring_buf_space_get(&uart_rb);
-		k_usleep(100);
+
+		if (uart_poll_in(uart_dev, &byte) < 0)
+			continue;
+
+		if (0 == ring_buf_space_get(&uart_rb)) {
+			r = ring_buf_get(&uart_rb, &ovflw, 1);
+			if (r != 1) {
+				LOG_ERR("failed to remove head of ring buffer");
+				return;
+			}
+			LOG_ERR("overflow occurred");
+		}
+
+		if (1 != ring_buf_put(&uart_rb, &byte, 1)) {
+			LOG_ERR("ring_buf_put() failed");
+		}
+
 	}
 
 	data = realloc(data, msg_size);
@@ -170,6 +188,7 @@ static const struct gb_transport_backend gb_xport = {
 	.free_buf = gb_xport_free_buf,
 };
 
+#ifdef CONFIG_UART_INTERRUPT_DRIVEN
 static void gb_xport_uart_isr(const struct device *dev, void *user_data)
 {
 	int r;
@@ -212,6 +231,44 @@ static void gb_xport_uart_isr(const struct device *dev, void *user_data)
 		k_work_submit(&uart_work);
 	}
 }
+#else
+void gb_xport_uart_poll(void) {
+	int r;
+	uint8_t byte;
+    uint8_t ovflw;
+	size_t count;
+
+	if (uart_dev == NULL)
+	{
+		LOG_ERR("unable to find device named %s!", CONFIG_GREYBUS_XPORT_UART_DEV);
+		return;
+	}
+	LOG_INF("Greybus UART Transport start polling mode");
+
+	while(1) {
+		if (uart_poll_in(uart_dev, &byte) < 0)
+			continue;
+
+		if (0 == ring_buf_space_get(&uart_rb)) {
+			r = ring_buf_get(&uart_rb, &ovflw, 1);
+			if (r != 1) {
+				LOG_ERR("failed to remove head of ring buffer");
+				return;
+			}
+			LOG_ERR("overflow occurred");
+		}
+
+		if (1 != ring_buf_put(&uart_rb, &byte, 1)) {
+			LOG_ERR("ring_buf_put() failed");
+		}
+
+		count = UART_RB_SIZE - ring_buf_space_get(&uart_rb);
+		if (count >= sizeof(struct gb_operation_hdr)) {
+			k_work_submit(&uart_work);
+		}
+	}
+}
+#endif
 
 static int gb_xport_uart_init(void)
 {
@@ -225,6 +282,7 @@ static int gb_xport_uart_init(void)
 		r = -ENODEV;
 		goto out;
 	}
+#ifdef CONFIG_UART_INTERRUPT_DRIVEN
 	uart_irq_rx_disable(uart_dev);
 	uart_irq_tx_disable(uart_dev);
 
@@ -236,6 +294,7 @@ static int gb_xport_uart_init(void)
 	}
 
 	uart_irq_rx_enable(uart_dev);
+#endif
 
 	r = 0;
 
@@ -268,3 +327,7 @@ struct gb_transport_backend *gb_transport_backend_init(size_t num_cports) {
 out:
     return ret;
 }
+#ifndef CONFIG_UART_INTERRUPT_DRIVEN
+K_THREAD_DEFINE(gb_xport_uart_poll_id, 2048, gb_xport_uart_poll, NULL, NULL, NULL,
+		1, 0, 1000);
+#endif

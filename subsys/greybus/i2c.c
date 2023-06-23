@@ -35,8 +35,9 @@
 #include <stdlib.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/kernel.h>
-
+#include <zephyr/logging/log.h>
 #include "i2c-gb.h"
+LOG_MODULE_REGISTER(gbi2c, CONFIG_I2C_LOG_LEVEL);
 
 static uint8_t gb_i2c_protocol_version(struct gb_operation *operation)
 {
@@ -139,6 +140,7 @@ static uint8_t gb_i2c_protocol_transfer(struct gb_operation *operation)
         requests[i].flags = 0;
         requests[i].len  = sys_le16_to_cpu(desc->size);
 
+        
         if (read_op) {
             requests[i].flags |= I2C_MSG_READ;
             requests[i].buf = &response->data[read_count];

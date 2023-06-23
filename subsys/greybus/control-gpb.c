@@ -42,6 +42,8 @@ LOG_MODULE_REGISTER(greybus_control, CONFIG_GREYBUS_LOG_LEVEL);
 
 #include "control-gb.h"
 
+extern uint32_t greybus_global_scratch[32];
+
 static uint8_t gb_control_protocol_version(struct gb_operation *operation)
 {
     struct gb_control_proto_version_response *response;
@@ -64,6 +66,19 @@ static uint8_t gb_control_get_manifest_size(struct gb_operation *operation)
         return GB_OP_NO_MEMORY;
 
     response->size = sys_cpu_to_le16(get_manifest_size());
+
+    return GB_OP_SUCCESS;
+}
+
+static uint8_t gb_control_get_global_scratch(struct gb_operation *operation)
+{
+    struct gb_control_get_global_scratch_response *response;
+
+    response = gb_operation_alloc_response(operation, sizeof(greybus_global_scratch));
+    if (!response)
+        return GB_OP_NO_MEMORY;
+
+    memcpy(response->data, greybus_global_scratch, sizeof(greybus_global_scratch));
 
     return GB_OP_SUCCESS;
 }
@@ -403,6 +418,7 @@ static struct gb_operation_handler gb_control_handlers[] = {
     GB_HANDLER(GB_CONTROL_TYPE_TIMESYNC_DISABLE, gb_control_timesync_disable),
     GB_HANDLER(GB_CONTROL_TYPE_TIMESYNC_AUTHORITATIVE, gb_control_timesync_authoritative),
     GB_HANDLER(GB_CONTROL_TYPE_TIMESYNC_GET_LAST_EVENT, gb_control_timesync_get_last_event),
+    GB_HANDLER(GB_CONTROL_TYPE_GET_GLOBAL_SCRATCH, gb_control_get_global_scratch),    
 };
 
 struct gb_driver control_driver = {

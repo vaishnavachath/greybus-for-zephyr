@@ -339,8 +339,8 @@ static void accept_new_connection(struct fd_context *ctx)
     	return;
     }
 
-    LOG_DBG("cport %d accepted connection from [%s]:%d as fd %d",
-        ctx->cport, log_strdup(addrstr), ntohs(addr.sin6_port), fd);
+    // LOG_DBG("cport %d accepted connection from [%s]:%d as fd %d",
+    //     ctx->cport, addrstr, ntohs(addr.sin6_port), fd);
 }
 
 static void handle_client_input(struct fd_context *ctx)

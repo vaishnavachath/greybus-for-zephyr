@@ -59,6 +59,7 @@
 #define GB_CONTROL_TYPE_INTF_SUSPEND_PREPARE		0x13
 #define GB_CONTROL_TYPE_INTF_DEACTIVATE_PREPARE	0x14
 #define GB_CONTROL_TYPE_INTF_HIBERNATE_ABORT	0x15
+#define GB_CONTROL_TYPE_GET_GLOBAL_SCRATCH 0x32
 
 /* version request has no payload */
 struct gb_control_proto_version_response {
@@ -74,6 +75,10 @@ struct gb_control_get_manifest_size_response {
 /* Control protocol get manifest request has no payload */
 struct gb_control_get_manifest_response {
     __u8      data[0];
+} __packed;
+
+struct gb_control_get_global_scratch_response {
+    __u8      data[128];
 } __packed;
 
 /* Control protocol [dis]connected request */

@@ -64,6 +64,79 @@ void qsort(void *base, size_t nmemb, size_t size,
 
 #endif
 
+#define GB_MATH_ADD 1
+#define GB_MATH_SUB 2
+#define GB_MATH_MUL 3
+#define GB_MATH_DIV 4
+#define GB_MATH_MOD 5
+#define GB_MATH_INC 6
+#define GB_MATH_DEC 7
+#define GB_MATH_BWAND 8
+#define GB_MATH_BWOR 9
+#define GB_MATH_BWXOR 10
+#define GB_MATH_BWLSH 11
+#define GB_MATH_BWRSH 12
+#define GB_MATH_BWNOT 13
+#define GB_MATH_COND_EQ 14
+#define GB_MATH_COND_NE 15
+#define GB_MATH_COND_GT 16
+#define GB_MATH_COND_LT 17
+#define GB_MATH_COND_GTEQ 18
+#define GB_MATH_COND_LTEQ 19
+
+#define GB_LOCAL_PLAYBACK 0xB0
+#define GB_LOCAL_MEMOP 0xB1
+#define GB_LOCAL_MATHOP 0xB2
+#define GB_LOCAL_DELAYOP 0xB3
+#define GB_LOCAL_IF 0xC0
+#define GB_LOCAL_WHILE 0xD0
+
+#define GB_SCRATCH_SIZE 64
+
+uint32_t greybus_global_scratch[GB_SCRATCH_SIZE];
+static void local_gb_work_fn(struct k_work *work);
+static K_WORK_DEFINE(local_gb_work, local_gb_work_fn);
+void *g_local_gb_message_buf;
+size_t g_local_gb_message_size;
+int g_local_gb_message_pending = 0;
+int g_local_gb_message_infinite = 0;
+size_t g_local_gb_message_cport;
+
+
+struct gb_operation_local_simpleplayback
+{
+	__u8 op_count;
+	__u8 infinite;
+	void *data;
+};
+
+struct gb_local_memop
+{
+	__u8 offset;
+	__u8 opcount;
+	__le32 value;
+} __packed;
+
+struct gb_local_mathop
+{
+	__u8 dest;
+	__u8 src1;
+	__u8 src2;
+	__u8 operator;
+} __packed;
+
+struct gb_local_ifop
+{
+	__u8 condoffset;
+	__u8 opcount;
+} __packed;
+
+struct gb_local_whileop
+{
+	__u8 condoffset;
+	__u8 opcount;
+} __packed;
+
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -268,7 +341,7 @@ static void gb_process_request(struct gb_operation_hdr *hdr,
     operation->bundle = g_cport[operation->cport].driver->bundle;
 
     result = op_handler->handler(operation);
-    LOG_DBG("%s: %u", log_strdup(gb_handler_name(op_handler)), result);
+    LOG_DBG("%s: %u", gb_handler_name(op_handler), result);
 
     if (hdr->id)
         gb_operation_send_response(operation, result);
@@ -454,13 +527,378 @@ static struct gb_operation *gb_rx_create_operation(unsigned cport, void *data,
 }
 #endif
 
+unsigned int process_local_memory_operation(unsigned int offset,
+											uint32_t value)
+{
+	greybus_global_scratch[offset] = value;
+
+	return 0;
+}
+
+unsigned int process_local_math_operation(unsigned int dest,
+											unsigned int src1,
+											unsigned int src2,
+											unsigned int operator)
+{
+	switch (operator)
+	{
+	case GB_MATH_ADD:
+		greybus_global_scratch[dest] = greybus_global_scratch[src1] + greybus_global_scratch[src2];
+		break;
+	case GB_MATH_SUB:
+		greybus_global_scratch[dest] = greybus_global_scratch[src1] - greybus_global_scratch[src2];
+		break;
+	case GB_MATH_MUL:
+		greybus_global_scratch[dest] = greybus_global_scratch[src1] * greybus_global_scratch[src2];
+		break;
+	case GB_MATH_DIV:
+		greybus_global_scratch[dest] = greybus_global_scratch[src1] / greybus_global_scratch[src2];
+		break;
+	case GB_MATH_MOD:
+		greybus_global_scratch[dest] = greybus_global_scratch[src1] % greybus_global_scratch[src2];
+		break;
+	case GB_MATH_INC:
+		greybus_global_scratch[dest]++;
+		break;
+	case GB_MATH_DEC:
+		greybus_global_scratch[dest]--;
+		break;
+	case GB_MATH_BWAND:
+		greybus_global_scratch[dest] = greybus_global_scratch[src1] & greybus_global_scratch[src2];
+		break;				
+	case GB_MATH_BWOR:
+		greybus_global_scratch[dest] = greybus_global_scratch[src1] | greybus_global_scratch[src2];
+		break;
+	case GB_MATH_BWXOR:
+		greybus_global_scratch[dest] = greybus_global_scratch[src1] ^ greybus_global_scratch[src2];
+		break;
+	case GB_MATH_BWLSH:
+		greybus_global_scratch[dest] = greybus_global_scratch[src1] << greybus_global_scratch[src2];
+		break;
+	case GB_MATH_BWRSH:
+		greybus_global_scratch[dest] = greybus_global_scratch[src1] >> greybus_global_scratch[src2];
+		break;
+	case GB_MATH_BWNOT:
+		greybus_global_scratch[dest] = ~greybus_global_scratch[src1];
+		break;
+	case GB_MATH_COND_EQ:
+		greybus_global_scratch[dest] = (greybus_global_scratch[src1] == greybus_global_scratch[src2]);
+		break;
+	case GB_MATH_COND_NE:
+		greybus_global_scratch[dest] = (greybus_global_scratch[src1] != greybus_global_scratch[src2]);
+		break;;
+	case GB_MATH_COND_GT:
+		greybus_global_scratch[dest] = (greybus_global_scratch[src1] > greybus_global_scratch[src2]);
+		break;
+	case GB_MATH_COND_LT:
+		greybus_global_scratch[dest] = (greybus_global_scratch[src1] < greybus_global_scratch[src2]);
+		break;
+	case GB_MATH_COND_GTEQ:
+		greybus_global_scratch[dest] = (greybus_global_scratch[src1] >= greybus_global_scratch[src2]);
+		break;
+	case GB_MATH_COND_LTEQ:
+		greybus_global_scratch[dest] = (greybus_global_scratch[src1] <= greybus_global_scratch[src2]);
+		break;
+	}
+	return 0;
+}
+
+
+unsigned int dispatch_local_message(unsigned int cport, void *data, size_t size)
+{
+
+	struct gb_operation_handler *op_handler;
+	struct gb_operation *operation;
+	struct gb_operation_hdr *hdr = data;
+	struct gb_operation_hdr *resp_hdr;
+	int result = 0;
+	unsigned int payloadoff = sizeof(struct gb_operation_hdr);
+
+	LOG_HEXDUMP_DBG(data, size, "dipatch Local RX: ");
+
+	operation = gb_rx_create_operation(cport, data, size);
+	op_handler = find_operation_handler(hdr->type, operation->cport);
+
+	if (!op_handler)
+	{
+		LOG_ERR("Cport %u: Invalid operation type %u",
+				operation->cport, hdr->type);
+		return -EINVAL;
+	}
+
+	operation->bundle = g_cport[operation->cport].driver->bundle;
+	result = op_handler->handler(operation);
+
+	LOG_DBG("local %s: %u", gb_handler_name(op_handler), result);
+	resp_hdr = operation->response_buffer;
+	if (hdr->id)
+	{
+		LOG_HEXDUMP_DBG(operation->response_buffer, resp_hdr->size, "Local TX: ");
+		switch (resp_hdr->size - payloadoff)
+		{
+		case 1:
+			result = (uint8_t)(*((u_int16_t *)((char *)operation->response_buffer + payloadoff)));
+			break;
+		case 2:
+			result = (uint16_t)sys_le16_to_cpu(*((u_int16_t *)((char *)operation->response_buffer + payloadoff)));
+			break;
+		case 4:
+			result = (uint32_t)sys_le32_to_cpu(*((u_int16_t *)((char *)operation->response_buffer + payloadoff)));
+			break;
+		default:
+			result = 0;
+		}
+	}d
+	gb_operation_destroy(operation);
+	return result;
+}
+
+static void process_local_ifop(void *data) {
+    struct gb_operation_hdr *currhdr;
+    struct gb_local_ifop *ifop;
+    unsigned int lcport;
+    unsigned int op_count;
+	unsigned int mop_count;
+    unsigned int value = 0;
+	struct gb_local_memop *memop;
+    struct gb_local_mathop *mathop;
+    unsigned int result = 0;
+
+    ifop = (void *)((char *)data + sizeof(struct gb_operation_hdr));
+    op_count = ifop->opcount;
+    LOG_INF("condition at offset %u is %u", ifop->condoffset, greybus_global_scratch[ifop->condoffset]);
+
+    if (!greybus_global_scratch[ifop->condoffset]) {
+        return;
+    }
+    currhdr = (void *)((char *)data + sizeof(struct gb_operation_hdr) + sizeof(struct gb_local_ifop));
+    for (int i = 0; i < op_count; i++)
+    {
+        // LOG_HEXDUMP_INF(currhdr, currhdr->size, "Local RX loop IF: ");
+
+        // if memory write operation process here itself
+        if (currhdr->type == GB_LOCAL_MEMOP)
+        {
+            memop = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr));
+            mop_count = memop->opcount;
+            value = memop->value;
+            if (mop_count == 0)
+            {
+                process_local_memory_operation(memop->offset, sys_le32_to_cpu(value));
+                currhdr = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr) + sizeof(struct gb_local_memop));
+            }
+            else
+            {
+                currhdr = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr) + sizeof(struct gb_local_memop));
+                for (int j = 0; j < mop_count; j++)
+                {
+                    lcport = sys_le16_to_cpu(*((uint16_t *)currhdr->pad));
+                    result = dispatch_local_message(lcport, (void *)currhdr, currhdr->size);
+                    currhdr = (void *)((char *)currhdr + sys_le16_to_cpu(currhdr->size));
+                    i++;
+                }
+                value = process_local_memory_operation(memop->offset, sys_le32_to_cpu(result));
+            }
+        }
+        else if (currhdr->type == GB_LOCAL_MATHOP)
+        {
+            mathop = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr));
+            process_local_math_operation(mathop->dest, mathop->src1, mathop->src2, mathop->operator);
+            currhdr = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr) + sizeof(struct gb_local_mathop));
+        }
+        else if (currhdr->type == GB_LOCAL_DELAYOP)
+        {
+            lcport = sys_le16_to_cpu(*((uint16_t *)currhdr->pad)); //usecs delay
+            k_busy_wait(lcport);					
+        }
+        else
+        {
+            lcport = sys_le16_to_cpu(*((uint16_t *)currhdr->pad));
+            result = dispatch_local_message(lcport, (void *)currhdr, currhdr->size);
+            currhdr = (void *)((char *)currhdr + sys_le16_to_cpu(currhdr->size));
+        }
+    }
+}
+
+static void local_gb_work_fn(struct k_work *work)
+{
+
+	void *data = g_local_gb_message_buf;
+	size_t size = g_local_gb_message_size;
+	struct gb_operation_hdr *hdr = data;
+	struct gb_operation_hdr *currhdr;
+	struct gb_operation_local_simpleplayback *playback;
+	struct gb_local_ifop *ifop;
+	struct gb_local_whileop *whileop;
+	struct gb_local_mathop *mathop;
+	unsigned int result = 0;
+	unsigned int lcport;
+	unsigned int op_count;
+	unsigned int mop_count;
+	struct gb_local_memop *memop;
+	unsigned int value = 0;
+	g_local_gb_message_pending = 1;
+	LOG_HEXDUMP_DBG(data, size, "Local RX: ");
+
+	do {
+		if (hdr->type == GB_LOCAL_PLAYBACK)
+		{
+			playback = (void *)((char *)data + sizeof(struct gb_operation_hdr));
+			op_count = playback->op_count;
+			currhdr = (void *)((char *)data + sizeof(struct gb_operation_hdr) + 2);
+			for (int i = 0; i < op_count; i++)
+			{
+				LOG_HEXDUMP_DBG(currhdr, currhdr->size, "Local RX loop: ");
+                
+				// if memory write operation process here itself
+				if (currhdr->type == GB_LOCAL_MEMOP)
+				{
+					memop = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr));
+					mop_count = memop->opcount;
+					value = memop->value;
+					if (mop_count == 0)
+					{
+						process_local_memory_operation(memop->offset, sys_le32_to_cpu(value));
+						currhdr = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr) + sizeof(struct gb_local_memop));
+					}
+					else
+					{
+						currhdr = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr) + sizeof(struct gb_local_memop));
+						for (int j = 0; j < mop_count; j++)
+						{
+                            
+							lcport = sys_le16_to_cpu(*((uint16_t *)currhdr->pad));
+							result = dispatch_local_message(lcport, (void *)currhdr, currhdr->size);
+							currhdr = (void *)((char *)currhdr + sys_le16_to_cpu(currhdr->size));
+							j++;
+						}
+						value = process_local_memory_operation(memop->offset, sys_le32_to_cpu(result));
+					}
+				}
+				else if (currhdr->type == GB_LOCAL_MATHOP)
+				{
+					mathop = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr));
+					process_local_math_operation(mathop->dest, mathop->src1, mathop->src2, mathop->operator);
+					currhdr = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr) + sizeof(struct gb_local_mathop));
+				}
+				else if (currhdr->type == GB_LOCAL_DELAYOP)
+				{
+					lcport = sys_le16_to_cpu(*((uint16_t *)currhdr->pad)); //usecs delay
+					k_busy_wait(lcport);					
+				}
+                else if (currhdr->type == GB_LOCAL_IF)
+                {
+                    process_local_ifop(currhdr);
+                    currhdr = (void *)((char *)currhdr + sys_le16_to_cpu(currhdr->size));
+                }
+				else
+				{
+					lcport = sys_le16_to_cpu(*((uint16_t *)currhdr->pad));
+					result = dispatch_local_message(lcport, (void *)currhdr, currhdr->size);
+					currhdr = (void *)((char *)currhdr + sys_le16_to_cpu(currhdr->size));
+				}
+			}
+		}
+		// play if condition passes
+		else if (hdr->type == GB_LOCAL_IF)
+		{
+			process_local_ifop(data);
+		}
+		// while loop if condition passes
+		else if (hdr->type == GB_LOCAL_WHILE)
+		{
+			whileop = (void *)((char *)data + sizeof(struct gb_operation_hdr));
+			op_count = whileop->opcount;
+
+			while (greybus_global_scratch[whileop->condoffset])
+			{
+				currhdr = (void *)((char *)data + sizeof(struct gb_operation_hdr) + sizeof(struct gb_local_whileop));
+				for (int i = 0; i < op_count; i++)
+				{
+					LOG_HEXDUMP_DBG(currhdr, currhdr->size, "Local RX loop while: ");
+
+					// if memory write operation process here itself
+					if (currhdr->type == GB_LOCAL_MEMOP)
+					{
+						memop = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr));
+						mop_count = memop->opcount;
+						value = memop->value;
+						if (mop_count == 0)
+						{
+							process_local_memory_operation(memop->offset, sys_le32_to_cpu(value));
+							currhdr = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr) + sizeof(struct gb_local_memop));
+						}
+						else
+						{
+							currhdr = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr) + sizeof(struct gb_local_memop));
+							for (int j = 0; j < mop_count; j++)
+							{
+								lcport = sys_le16_to_cpu(*((uint16_t *)currhdr->pad));
+								result = dispatch_local_message(lcport, (void *)currhdr, currhdr->size);
+								currhdr = (void *)((char *)currhdr + sys_le16_to_cpu(currhdr->size));
+								i++;
+							}
+							value = process_local_memory_operation(memop->offset, sys_le32_to_cpu(result));
+						}
+					}
+					else if (currhdr->type == GB_LOCAL_MATHOP)
+					{
+						mathop = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr));
+						process_local_math_operation(mathop->dest, mathop->src1, mathop->src2, mathop->operator);
+						currhdr = (void *)((char *)currhdr + sizeof(struct gb_operation_hdr) + sizeof(struct gb_local_mathop));
+					}
+					else if (currhdr->type == GB_LOCAL_DELAYOP)
+					{
+						lcport = sys_le16_to_cpu(*((uint16_t *)currhdr->pad)); //usecs delay
+						k_busy_wait(lcport);					
+					}
+					else
+					{
+						lcport = sys_le16_to_cpu(*((uint16_t *)currhdr->pad));
+						result = dispatch_local_message(lcport, (void *)currhdr, currhdr->size);
+						currhdr = (void *)((char *)currhdr + sys_le16_to_cpu(currhdr->size));
+					}
+				}
+			}
+		}
+		if(g_local_gb_message_infinite) {
+            k_sleep(K_MSEC(1));
+			k_yield();
+		}
+	} while(g_local_gb_message_infinite);
+	g_local_gb_message_pending = 0;
+	g_local_gb_message_infinite = 0;
+	return;
+}
+
 int greybus_rx_handler(unsigned int cport, void *data, size_t size)
 {
-    int flags;
-    struct gb_operation *op;
-    struct gb_operation_hdr *hdr = data;
-    struct gb_operation_handler *op_handler;
-    size_t hdr_size;
+	int flags;
+	struct gb_operation *op;
+	struct gb_operation_hdr *hdr = data;
+	struct gb_operation_handler *op_handler;
+	size_t hdr_size;
+	int result;
+
+	if (hdr->pad[1] == 0xA0)
+	{	
+		if(g_local_gb_message_pending) {
+			if(hdr->pad[0] == 0xA1) {
+				g_local_gb_message_infinite = 0;
+				result = k_work_cancel(&local_gb_work);
+				g_local_gb_message_pending = 0;
+				return 0;
+			}
+			// else
+			// 	return - EBUSY;
+		}
+		memcpy(g_local_gb_message_buf, data, size);
+		g_local_gb_message_size = size;
+		g_local_gb_message_cport = cport;
+		g_local_gb_message_infinite = (hdr->pad[0] == 0xAA);
+		k_work_submit(&local_gb_work);
+		return 0;
+	}
 
     gb_loopback_log_entry(cport);
     if (cport >= cport_count || !data) {
@@ -485,7 +923,7 @@ int greybus_rx_handler(unsigned int cport, void *data, size_t size)
         return -EINVAL; /* Dropping garbage request */
     }
 
-    //LOG_HEXDUMP_DBG(data, size, "RX: ");
+    // LOG_HEXDUMP_INF(data, size, "RX: ");
 
     if (gb_tape && gb_tape_fd >= 0) {
         struct gb_tape_record_header record_hdr = {
@@ -1117,7 +1555,13 @@ int gb_init(struct gb_transport_backend *transport)
     transport_backend = transport;
     transport_backend->init();
 
-    return 0;
+	g_local_gb_message_buf = malloc(GB_MTU);
+	if (!g_local_gb_message_buf)
+	{
+		LOG_ERR("Failed to allocate gb local message buffer");
+	}
+
+	return 0;
 }
 
 void gb_deinit(void)
